@@ -15,6 +15,7 @@ const CompetitionForm = lazy(
 const CompetitionDetail = lazy(
   () => import("./components/admin/CompetitionDetail"),
 );
+const SettingsPage = lazy(() => import("./components/admin/SettingsPage"));
 
 function App() {
   return (
@@ -36,7 +37,7 @@ function App() {
               path="competitions/:id/edit"
               element={<CompetitionForm mode="edit" />}
             />
-            <Route path="settings" element={<div>Settings Page</div>} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
 
           {/* For Tempo storyboards */}
