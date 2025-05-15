@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import CompetitionCard from "./CompetitionCard";
 import FilterBar from "./FilterBar";
+import { supabase } from "@/lib/supabase";
 
 interface Competition {
   id: string;
@@ -11,23 +12,65 @@ interface Competition {
   prizeValue: string;
   category: string;
   difficulty: "Easy" | "Medium" | "Hard";
-  requirements: string;
+  tldr: string;
+  requirements: string[];
   rules: string;
+  entryUrl: string;
+  type: "directory" | "custom";
+  isArchived: boolean;
 }
 
 interface CompetitionGridProps {
   competitions?: Competition[];
+  filters?: {
+    category: string;
+    prizeValue: string;
+    endDate: string;
+    difficulty: string;
+  };
 }
 
-const CompetitionGrid = ({ competitions = [] }: CompetitionGridProps) => {
-  const [filters, setFilters] = useState({
+const CompetitionGrid = ({
+  competitions = [],
+  filters: propFilters,
+}: CompetitionGridProps) => {
+  const [localFilters, setLocalFilters] = useState({
     category: "",
-    prizeRange: "",
+    prizeValue: "",
     endDate: "",
     difficulty: "",
   });
+  const [dbCompetitions, setDbCompetitions] = useState<Competition[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Default competitions if none are provided
+  // Use filters from props if provided, otherwise use local state
+  const filters = propFilters || localFilters;
+
+  useEffect(() => {
+    if (competitions.length === 0) {
+      fetchCompetitions();
+    }
+  }, []);
+
+  const fetchCompetitions = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("competitions")
+        .select("*")
+        .eq("isArchived", false)
+        .order("deadline", { ascending: true });
+
+      if (error) throw error;
+      setDbCompetitions(data || []);
+    } catch (error) {
+      console.error("Error fetching competitions:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Default competitions if none are provided and none in database
   const defaultCompetitions: Competition[] = [
     {
       id: "1",
@@ -38,10 +81,17 @@ const CompetitionGrid = ({ competitions = [] }: CompetitionGridProps) => {
       prizeValue: "$5,000",
       category: "Creative",
       difficulty: "Medium",
-      requirements:
-        'Submit a high-resolution photograph that captures the theme "Nature Awakens".',
+      tldr: 'Submit a high-resolution photograph that captures the theme "Nature Awakens".',
+      requirements: [
+        "Must be 18+ years old",
+        "Photos must be original work",
+        "Maximum 3 entries per person",
+      ],
       rules:
         "All entries must be original work. No watermarks or signatures on images. Maximum 3 entries per person.",
+      entryUrl: "#",
+      type: "directory",
+      isArchived: false,
     },
     {
       id: "2",
@@ -52,10 +102,17 @@ const CompetitionGrid = ({ competitions = [] }: CompetitionGridProps) => {
       prizeValue: "$10,000",
       category: "Gaming",
       difficulty: "Hard",
-      requirements:
-        "Register a team of 4 players. All participants must be 18+ and have their own equipment.",
+      tldr: "Register a team of 4 players for our annual gaming tournament.",
+      requirements: [
+        "All participants must be 18+",
+        "Teams of 4 players required",
+        "Own equipment needed",
+      ],
       rules:
         "Double elimination format. Matches will be streamed live. Code of conduct must be followed.",
+      entryUrl: "#",
+      type: "custom",
+      isArchived: false,
     },
     {
       id: "3",
@@ -66,10 +123,17 @@ const CompetitionGrid = ({ competitions = [] }: CompetitionGridProps) => {
       prizeValue: "$2,500",
       category: "Food",
       difficulty: "Easy",
-      requirements:
-        "Create an original recipe using the secret ingredient revealed on October 1st.",
+      tldr: "Create an original recipe using the secret ingredient revealed on October 1st.",
+      requirements: [
+        "Must use the secret ingredient",
+        "Recipe must be vegetarian-friendly",
+        "Include a photo of the finished dish",
+      ],
       rules:
         "Recipe must be vegetarian-friendly. Include a photo of the finished dish. Judging based on creativity, presentation, and simplicity.",
+      entryUrl: "#",
+      type: "directory",
+      isArchived: false,
     },
     {
       id: "4",
@@ -80,10 +144,17 @@ const CompetitionGrid = ({ competitions = [] }: CompetitionGridProps) => {
       prizeValue: "$7,500",
       category: "Technology",
       difficulty: "Medium",
-      requirements:
-        "Design a mobile app interface for a health tracking application.",
+      tldr: "Design a mobile app interface for a health tracking application.",
+      requirements: [
+        "Submit all designs in Figma format",
+        "Include at least 5 key screens",
+        "Design must be accessible",
+      ],
       rules:
         "Submit all designs in Figma format. Include at least 5 key screens. Design must be accessible and follow modern UI principles.",
+      entryUrl: "#",
+      type: "directory",
+      isArchived: false,
     },
     {
       id: "5",
@@ -94,10 +165,17 @@ const CompetitionGrid = ({ competitions = [] }: CompetitionGridProps) => {
       prizeValue: "$3,000",
       category: "Writing",
       difficulty: "Medium",
-      requirements:
-        'Write a short story of maximum 5,000 words on the theme "The Unexpected Journey".',
+      tldr: 'Write a short story of maximum 5,000 words on the theme "The Unexpected Journey".',
+      requirements: [
+        "Maximum 5,000 words",
+        "Must follow the theme",
+        "One entry per person",
+      ],
       rules:
         "Stories must be in English. No previously published work. One entry per person. All genres accepted.",
+      entryUrl: "#",
+      type: "directory",
+      isArchived: false,
     },
     {
       id: "6",
@@ -108,10 +186,17 @@ const CompetitionGrid = ({ competitions = [] }: CompetitionGridProps) => {
       prizeValue: "$1,500",
       category: "Health",
       difficulty: "Easy",
-      requirements:
-        "Complete a 30-day fitness program and document your progress.",
+      tldr: "Complete a 30-day fitness program and document your progress.",
+      requirements: [
+        "Daily check-ins required",
+        "Follow the provided workout schedule",
+        "Document your progress",
+      ],
       rules:
         "Daily check-ins required. Before and after photos encouraged but not mandatory. Must follow the provided workout schedule.",
+      entryUrl: "#",
+      type: "custom",
+      isArchived: false,
     },
     {
       id: "7",
@@ -122,9 +207,17 @@ const CompetitionGrid = ({ competitions = [] }: CompetitionGridProps) => {
       prizeValue: "$4,000",
       category: "Design",
       difficulty: "Medium",
-      requirements: "Create a modern logo for a sustainable fashion brand.",
+      tldr: "Create a modern logo for a sustainable fashion brand.",
+      requirements: [
+        "Submit in vector format",
+        "Include color and black/white versions",
+        "Logo must work at various sizes",
+      ],
       rules:
         "Submit in vector format. Include color and black/white versions. Logo must work at various sizes.",
+      entryUrl: "#",
+      type: "directory",
+      isArchived: false,
     },
     {
       id: "8",
@@ -135,15 +228,27 @@ const CompetitionGrid = ({ competitions = [] }: CompetitionGridProps) => {
       prizeValue: "$6,000",
       category: "Music",
       difficulty: "Hard",
-      requirements:
-        "Produce an original track between 3-5 minutes using the provided sample pack.",
+      tldr: "Produce an original track between 3-5 minutes using the provided sample pack.",
+      requirements: [
+        "Track must be 3-5 minutes long",
+        "Use only the provided sample pack",
+        "No third-party loops or samples",
+      ],
       rules:
         "All sounds must be from the official sample pack or originally created. No third-party loops or samples allowed.",
+      entryUrl: "#",
+      type: "custom",
+      isArchived: false,
     },
   ];
 
+  // Use competitions from props, then database, then defaults
   const competitionsToDisplay =
-    competitions.length > 0 ? competitions : defaultCompetitions;
+    competitions.length > 0
+      ? competitions
+      : dbCompetitions.length > 0
+        ? dbCompetitions
+        : defaultCompetitions;
 
   // Apply filters
   const filteredCompetitions = competitionsToDisplay.filter((comp) => {
@@ -155,11 +260,11 @@ const CompetitionGrid = ({ competitions = [] }: CompetitionGridProps) => {
   });
 
   const handleFilterChange = (newFilters: any) => {
-    setFilters(newFilters);
+    setLocalFilters(newFilters);
   };
 
   const resetFilters = () => {
-    setFilters({
+    setLocalFilters({
       category: "",
       prizeRange: "",
       endDate: "",
@@ -197,13 +302,20 @@ const CompetitionGrid = ({ competitions = [] }: CompetitionGridProps) => {
           Competition Directory
         </h1>
 
-        <FilterBar
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          onResetFilters={resetFilters}
-        />
+        {!propFilters && (
+          <FilterBar
+            filters={localFilters}
+            onFilterChange={handleFilterChange}
+            onResetFilters={resetFilters}
+          />
+        )}
 
-        {filteredCompetitions.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-16">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p className="mt-4 text-gray-600">Loading competitions...</p>
+          </div>
+        ) : filteredCompetitions.length === 0 ? (
           <div className="text-center py-16">
             <h3 className="text-xl text-gray-600">
               No competitions match your filters
@@ -224,7 +336,18 @@ const CompetitionGrid = ({ competitions = [] }: CompetitionGridProps) => {
           >
             {filteredCompetitions.map((competition) => (
               <motion.div key={competition.id} variants={itemVariants}>
-                <CompetitionCard competition={competition} />
+                <CompetitionCard
+                  id={competition.id}
+                  title={competition.title}
+                  imageUrl={competition.imageUrl}
+                  category={competition.category}
+                  deadline={competition.deadline}
+                  prizeValue={competition.prizeValue}
+                  difficulty={competition.difficulty}
+                  tldr={competition.tldr}
+                  requirements={competition.requirements}
+                  entryUrl={competition.entryUrl}
+                />
               </motion.div>
             ))}
           </motion.div>
